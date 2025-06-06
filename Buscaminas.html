@@ -2,135 +2,142 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Buscaminas</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #f0f0f0;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: #f0f0f0;
     }
-
     h1 {
       margin-bottom: 10px;
-      font-size: 1.5rem;
     }
-
-    #board {
+    #game {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 5px;
-      max-width: 360px;
+      gap: 4px;
+      max-width: 320px;
       width: 100%;
-    }
-
-    .cell {
-      aspect-ratio: 1;
-      background-color: #bbb;
-      font-size: 1.2rem;
-      border: none;
-      border-radius: 5px;
-      text-align: center;
-      padding: 0;
       user-select: none;
     }
-
+    .cell {
+      width: 35px;
+      height: 35px;
+      background: #bbb;
+      border-radius: 5px;
+      text-align: center;
+      line-height: 35px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      user-select: none;
+    }
     .cell.revealed {
-      background-color: #e0e0e0;
+      background: #e0e0e0;
+      cursor: default;
     }
-
+    .cell.mine {
+      background: red;
+      color: white;
+    }
     .cell.flagged {
-      background-color: #ffe082;
+      background: #ffeb3b;
+      color: black;
     }
-
-    button.back {
+    .btn-reset {
       margin-top: 15px;
       padding: 10px 20px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 8px;
       font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .btn-reset:hover {
+      background-color: #1769aa;
+    }
+    @media (max-width: 400px) {
+      #game {
+        grid-template-columns: repeat(6, 1fr);
+        max-width: 240px;
+      }
+      .cell {
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        font-size: 1rem;
+      }
     }
   </style>
 </head>
 <body>
   <h1>Buscaminas</h1>
-  <div id="board"></div>
-  <button class="back" onclick="window.location.href='index.html'">← Volver a la calculadora</button>
+  <div id="game"></div>
+  <button class="btn-reset" onclick="init()">Reiniciar</button>
 
   <script>
-    const rows = 8, cols = 8, totalMines = 10;
-    const board = document.getElementById("board");
-    let cells = [];
+    const rows = 8;
+    const cols = 8;
+    const minesCount = 10;
+
+    let grid = [];
+    let minePositions = new Set();
+    let gameOver = false;
+    let flagsLeft = minesCount;
+
+    const gameDiv = document.getElementById('game');
 
     function init() {
-      board.innerHTML = '';
-      cells = [];
+      gameOver = false;
+      flagsLeft = minesCount;
+      minePositions.clear;
+      minePositions = new Set();
+      grid = [];
+      gameDiv.innerHTML = '';
 
-      // Crear celdas
-      for (let i = 0; i < rows * cols; i++) {
-        const cell = document.createElement("button");
-        cell.classList.add("cell");
-        cell.dataset.index = i;
-        cell.dataset.revealed = "false";
-        cell.dataset.flagged = "false";
-        board.appendChild(cell);
-        cells.push(cell);
+      // Crear grid y celdas
+      for (let r = 0; r < rows; r++) {
+        grid[r] = [];
+        for (let c = 0; c < cols; c++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.dataset.flagged = 'false';
+          cell.addEventListener('click', onCellClick);
+          cell.addEventListener('contextmenu', onCellRightClick);
+          grid[r][c] = cell;
+          gameDiv.appendChild(cell);
+        }
       }
-
-      // Colocar minas
-      let minePositions = new Set();
-      while (minePositions.size < totalMines) {
-        minePositions.add(Math.floor(Math.random() * rows * cols));
-      }
-      minePositions.forEach(i => cells[i].dataset.mine = "true");
-
-      // Eventos
-      cells.forEach((cell, i) => {
-        let pressTimer;
-        cell.addEventListener('touchstart', e => {
-          e.preventDefault();
-          pressTimer = setTimeout(() => toggleFlag(i), 500);
-        });
-        cell.addEventListener('touchend', e => {
-          e.preventDefault();
-          clearTimeout(pressTimer);
-        });
-        cell.addEventListener('click', () => reveal(i));
-      });
+      placeMines();
+      calculateNumbers();
     }
 
-    function toggleFlag(i) {
-      const cell = cells[i];
-      if (cell.dataset.revealed === "true") return;
-
-      if (cell.dataset.flagged === "false") {
-        cell.textContent = "🚩";
-        cell.classList.add("flagged");
-        cell.dataset.flagged = "true";
-      } else {
-        cell.textContent = "";
-        cell.classList.remove("flagged");
-        cell.dataset.flagged = "false";
+    function placeMines() {
+      while (minePositions.size < minesCount) {
+        const pos = Math.floor(Math.random() * rows * cols);
+        minePositions.add(pos);
       }
     }
 
-    function reveal(i) {
-      const cell = cells[i];
-      if (cell.dataset.revealed === "true" || cell.dataset.flagged === "true") return;
-
-      cell.classList.add("revealed");
-      cell.dataset.revealed = "true";
-
-      if (cell.dataset.mine === "true") {
-        cell.textContent = "💣";
-        alert("¡BOOM! Perdiste.");
-        init(); // Reiniciar
-      }
-    }
-
-    init();
-  </script>
-</body>
-</html>
+    function calculateNumbers() {
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = grid[r][c];
+          if (minePositions.has(r * cols + c)) {
+            cell.dataset.mine = 'true';
+          } else {
+            cell.dataset.mine = 'false';
+            let minesAround = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+              for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                const nr = r +
